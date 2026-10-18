@@ -588,13 +588,13 @@ const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersect
 })();</script>
 <script id="omar-lanyard-loader">(()=>{
 const host=document.getElementById('omarLanyard'),reduced=matchMedia('(prefers-reduced-motion:reduce)');if(!host||reduced.matches)return;let started=false;
-const observer=new IntersectionObserver(async entries=>{if(started||!entries[0].isIntersecting)return;started=true;observer.disconnect();try{const {mountLanyard}=await import('./assets/lanyard/omar-lanyard.js?v=6');await mountLanyard(host,new URL('assets/image_001_53bc153cdce3.jpg',document.baseURI).href);if(host.querySelector('canvas'))host.classList.add('lanyard-ready');}catch(error){host.classList.add('lanyard-fallback');}},{rootMargin:'250px 0px'});observer.observe(host);
+const observer=new IntersectionObserver(async entries=>{if(started||!entries[0].isIntersecting)return;started=true;observer.disconnect();try{const {mountLanyard}=await import('./assets/lanyard/omar-lanyard.js?v=7');await mountLanyard(host,new URL('assets/image_001_53bc153cdce3.jpg',document.baseURI).href);if(host.querySelector('canvas'))host.classList.add('lanyard-ready');}catch(error){host.classList.add('lanyard-fallback');}},{rootMargin:'250px 0px'});observer.observe(host);
 })();</script>
 
 <script id="lanyard-automatic-phone-motion">(()=>{
 const host=document.getElementById('omarLanyard'),orientation=window.DeviceOrientationEvent,movement=window.DeviceMotionEvent;if(!host||(!orientation&&!movement)||!window.isSecureContext||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
 let visible=false,base=null,lastO=0,lastM=0,x=0,z=0,gravity=null,orientationOn=false,motionOn=false,pending=false;
-const clamp=(n,limit=1)=>Math.max(-limit,Math.min(limit,n)),send=(type,detail)=>host.dispatchEvent(new CustomEvent(type,{detail}));
+const clamp=(n,limit=1)=>Math.max(-limit,Math.min(limit,n)),send=(type,detail)=>{host.dispatchEvent(new CustomEvent(type,{detail}));window.omarCardFeedback?.(type,detail);};
 function angle(){return (window.screen?.orientation?.angle||window.orientation||0)*Math.PI/180;}
 function onOrientation(e){if(!visible||document.hidden||!Number.isFinite(e.gamma)||!Number.isFinite(e.beta))return;const now=performance.now();if(now-lastO<24)return;lastO=now;if(!base)base={g:e.gamma,b:e.beta};const gx=clamp((e.gamma-base.g)/25),gy=clamp((e.beta-base.b)/32),a=angle();x+=(clamp(gx*Math.cos(a)+gy*Math.sin(a))-x)*.24;z+=(clamp(-gx*Math.sin(a)+gy*Math.cos(a))-z)*.24;send('lanyardtilt',{x,z});}
 function onMovement(e){if(!visible||document.hidden)return;const now=performance.now();if(now-lastM<24)return;lastM=now;let v=e.acceleration,ax,ay,az;
@@ -609,5 +609,13 @@ host.addEventListener('pointerdown',()=>{if(pending)return;const jobs=[];pending
 },{capture:true});
 function reset(){base=null;gravity=null;x=z=0;send('lanyardtilt',{x:0,z:0});}
 new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;if(!visible)reset();},{threshold:.01}).observe(host);document.addEventListener('visibilitychange',()=>{if(document.hidden)reset();});window.addEventListener('orientationchange',reset);
+})();</script>
+<script id="card-visual-and-haptic-feedback">(()=>{
+const host=document.getElementById('omarLanyard');if(!host)return;const reduced=matchMedia('(prefers-reduced-motion:reduce)');let interacted=false,lastBuzz=-2000,frame=0,tx=0,ty=0,tr=0,x=0,y=0,r=0,vx=0,vy=0,vr=0,drag=false;
+function buzz(ms){if(!interacted||document.hidden||typeof navigator.vibrate!=='function')return false;const now=performance.now();if(now-lastBuzz<900)return false;lastBuzz=now;try{return navigator.vibrate(ms);}catch{return false;}}
+function tick(){frame=0;if(document.hidden||reduced.matches)return;const canvas=host.querySelector('canvas');if(!canvas)return;vx=(vx+(tx-x)*.11)*.77;vy=(vy+(ty-y)*.11)*.77;vr=(vr+(tr-r)*.11)*.77;x+=vx;y+=vy;r+=vr;canvas.style.transform=`translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) rotate(${r.toFixed(2)}deg)`;canvas.style.transformOrigin='50% 0';if(Math.abs(tx-x)+Math.abs(ty-y)+Math.abs(tr-r)+Math.abs(vx)+Math.abs(vy)+Math.abs(vr)>.04)frame=requestAnimationFrame(tick);}
+function start(){if(!frame&&!document.hidden&&!reduced.matches)frame=requestAnimationFrame(tick);}
+window.omarCardFeedback=(type,d)=>{if(reduced.matches)return;if(type==='lanyardtilt'){tx=(d.x||0)*12;ty=-(d.z||0)*12;tr=(d.x||0)*2.8;}else if(type==='lanyardimpulse'){vx+=(d.x||0)*4;vy+=((d.y||0)+(d.z||0)*.45)*4;vr+=((d.spin||0)+(d.x||0))*.8;if(Math.abs(d.x||0)+Math.abs(d.y||0)+Math.abs(d.z||0)>1.15)buzz(14);}start();};
+host.addEventListener('pointerdown',()=>{interacted=true;drag=true;buzz(9);},{passive:true});window.addEventListener('pointerup',()=>{if(drag){drag=false;buzz(12);}},{passive:true});host.addEventListener('pointercancel',()=>drag=false,{passive:true});document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);frame=0;if(typeof navigator.vibrate==='function')try{navigator.vibrate(0);}catch{}}else start();});
 })();</script>
 </body></html>
