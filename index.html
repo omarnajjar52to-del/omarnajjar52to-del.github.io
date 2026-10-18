@@ -2270,6 +2270,8 @@ const mountLaserFlow = (container, {
     };
     let raf = 0;
     let last = 0;
+    const mobileQuality = matchMedia("(pointer:coarse)").matches || innerWidth < 768;
+    let lastPaint = 0;
     let visible = true;
     let alive = true;
 
@@ -2362,7 +2364,7 @@ const mountLaserFlow = (container, {
       const width = Math.max(1, container.clientWidth);
       const height = Math.max(1, container.clientHeight);
       const s = settingsRef.current;
-      const baseDpr = Math.min(s.dpr || window.devicePixelRatio || 1, 2);
+      const baseDpr = Math.min(s.dpr || window.devicePixelRatio || 1, mobileQuality ? .65 : 2);
       const longest = Math.max(width, height) * baseDpr;
       const ratio = longest > MAX_RENDER_DIM ? (baseDpr * MAX_RENDER_DIM) / longest : baseDpr;
       const pixelWidth = Math.max(1, Math.round(width * ratio));
@@ -2470,6 +2472,8 @@ const mountLaserFlow = (container, {
     const frame = now => {
       raf = 0;
       if (!alive || !visible || document.hidden) return;
+      if (mobileQuality && lastPaint && now - lastPaint < 32) { raf = requestAnimationFrame(frame); return; }
+      lastPaint = now;
       const s = settingsRef.current;
       const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
       last = now;
@@ -2572,4 +2576,4 @@ const mountLaserFlow = (container, {
 
 };
 
-const host=document.getElementById('studioLaser'),panel=document.getElementById('studioLaserSurface');if(host&&panel){let started=false;const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;const io=new IntersectionObserver(entries=>{if(started||!entries.some(e=>e.isIntersecting))return;started=true;io.disconnect();try{mountLaserFlow(host,{surfaceRef:{current:panel},beamPosition:.5,color:'#3847ff',intensity:1.15,beamWidth:1.15,flare:1.1,spread:1.25,spill:.7,fog:.1,dust:.7,streaks:1.5,dots:1,pulse:1.5,speed:1.5,mouseInteraction:!reduced,intro:!reduced,paused:reduced,dpr:1});}catch(e){console.error('Laser Flow initialization failed',e);}}, {threshold:.05});io.observe(host);}})();</script><script id="studio-shared-card-motion">(()=>{const wrap=document.querySelector('.studio-laser-wrap');if(!wrap||matchMedia('(prefers-reduced-motion:reduce)').matches)return;let raf=0,visible=false;function paint(){raf=0;if(!visible)return;const b=wrap.getBoundingClientRect(),p=Math.max(-1,Math.min(1,(b.top+b.height*.5-innerHeight*.5)/innerHeight));wrap.style.setProperty('--laser-rx',(5+p*6)+'deg');wrap.style.setProperty('--laser-ry',(-8+p*5)+'deg');}function queue(){if(!raf&&visible)raf=requestAnimationFrame(paint);}const io=new IntersectionObserver(e=>{visible=e[0].isIntersecting;queue();},{rootMargin:'250px'});io.observe(wrap);addEventListener('scroll',queue,{passive:true});addEventListener('resize',queue,{passive:true});})();</script></body></html>
+const host=document.getElementById('studioLaser'),panel=document.getElementById('studioLaserSurface');if(host&&panel){let started=false;const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;const io=new IntersectionObserver(entries=>{if(started||!entries.some(e=>e.isIntersecting))return;started=true;io.disconnect();try{mountLaserFlow(host,{surfaceRef:{current:panel},beamPosition:.5,color:'#3847ff',intensity:1.15,beamWidth:1.15,flare:1.1,spread:1.25,spill:.7,fog:.1,dust:.7,streaks:1.5,dots:1,pulse:1.5,speed:1.5,mouseInteraction:!reduced&&!matchMedia('(pointer:coarse)').matches,intro:!reduced,paused:reduced,dpr:1});}catch(e){console.error('Laser Flow initialization failed',e);}}, {threshold:.05});io.observe(host);}})();</script><script id="studio-shared-card-motion">(()=>{const wrap=document.querySelector('.studio-laser-wrap');if(!wrap||matchMedia('(prefers-reduced-motion:reduce)').matches)return;let raf=0,visible=false;function paint(){raf=0;if(!visible)return;const b=wrap.getBoundingClientRect(),p=Math.max(-1,Math.min(1,(b.top+b.height*.5-innerHeight*.5)/innerHeight));wrap.style.setProperty('--laser-rx',(5+p*6)+'deg');wrap.style.setProperty('--laser-ry',(-8+p*5)+'deg');}function queue(){if(!raf&&visible)raf=requestAnimationFrame(paint);}const io=new IntersectionObserver(e=>{visible=e[0].isIntersecting;queue();},{rootMargin:'250px'});io.observe(wrap);addEventListener('scroll',queue,{passive:true});addEventListener('resize',queue,{passive:true});})();</script></body></html>
