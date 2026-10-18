@@ -588,17 +588,26 @@ const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersect
 })();</script>
 <script id="omar-lanyard-loader">(()=>{
 const host=document.getElementById('omarLanyard'),reduced=matchMedia('(prefers-reduced-motion:reduce)');if(!host||reduced.matches)return;let started=false;
-const observer=new IntersectionObserver(async entries=>{if(started||!entries[0].isIntersecting)return;started=true;observer.disconnect();try{const {mountLanyard}=await import('./assets/lanyard/omar-lanyard.js?v=5');await mountLanyard(host,new URL('assets/image_001_53bc153cdce3.jpg',document.baseURI).href);if(host.querySelector('canvas'))host.classList.add('lanyard-ready');}catch(error){host.classList.add('lanyard-fallback');}},{rootMargin:'250px 0px'});observer.observe(host);
+const observer=new IntersectionObserver(async entries=>{if(started||!entries[0].isIntersecting)return;started=true;observer.disconnect();try{const {mountLanyard}=await import('./assets/lanyard/omar-lanyard.js?v=6');await mountLanyard(host,new URL('assets/image_001_53bc153cdce3.jpg',document.baseURI).href);if(host.querySelector('canvas'))host.classList.add('lanyard-ready');}catch(error){host.classList.add('lanyard-fallback');}},{rootMargin:'250px 0px'});observer.observe(host);
 })();</script>
 
 <script id="lanyard-automatic-phone-motion">(()=>{
-const host=document.getElementById('omarLanyard'),api=window.DeviceOrientationEvent;if(!host||!api||!window.isSecureContext||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
-let active=false,asked=false,visible=false,base=null,last=0,x=0,z=0;
-const clamp=n=>Math.max(-1,Math.min(1,n)),send=(x,z)=>host.dispatchEvent(new CustomEvent('lanyardtilt',{detail:{x,z}}));
-function motion(e){if(!visible||document.hidden||!Number.isFinite(e.gamma)||!Number.isFinite(e.beta))return;const now=performance.now();if(now-last<32)return;last=now;if(!base)base={g:e.gamma,b:e.beta};const gx=clamp((e.gamma-base.g)/28),gy=clamp((e.beta-base.b)/38),angle=(screen.orientation?.angle||0)*Math.PI/180;x+=(clamp(gx*Math.cos(angle)+gy*Math.sin(angle))-x)*.2;z+=(clamp(-gx*Math.sin(angle)+gy*Math.cos(angle))-z)*.2;send(x,z);}
-function enable(){if(active)return;active=true;window.addEventListener('deviceorientation',motion,{passive:true});}
-if(typeof api.requestPermission!=='function')enable();else host.addEventListener('pointerdown',()=>{if(asked)return;asked=true;api.requestPermission().then(result=>{if(result==='granted')enable();}).catch(()=>{});},{capture:true});
-new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;if(!visible){base=null;x=z=0;send(0,0);}},{threshold:.1}).observe(host);
-document.addEventListener('visibilitychange',()=>{if(document.hidden){base=null;x=z=0;send(0,0);}});
+const host=document.getElementById('omarLanyard'),orientation=window.DeviceOrientationEvent,movement=window.DeviceMotionEvent;if(!host||(!orientation&&!movement)||!window.isSecureContext||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+let visible=false,base=null,lastO=0,lastM=0,x=0,z=0,gravity=null,orientationOn=false,motionOn=false,pending=false;
+const clamp=(n,limit=1)=>Math.max(-limit,Math.min(limit,n)),send=(type,detail)=>host.dispatchEvent(new CustomEvent(type,{detail}));
+function angle(){return (window.screen?.orientation?.angle||window.orientation||0)*Math.PI/180;}
+function onOrientation(e){if(!visible||document.hidden||!Number.isFinite(e.gamma)||!Number.isFinite(e.beta))return;const now=performance.now();if(now-lastO<24)return;lastO=now;if(!base)base={g:e.gamma,b:e.beta};const gx=clamp((e.gamma-base.g)/25),gy=clamp((e.beta-base.b)/32),a=angle();x+=(clamp(gx*Math.cos(a)+gy*Math.sin(a))-x)*.24;z+=(clamp(-gx*Math.sin(a)+gy*Math.cos(a))-z)*.24;send('lanyardtilt',{x,z});}
+function onMovement(e){if(!visible||document.hidden)return;const now=performance.now();if(now-lastM<24)return;lastM=now;let v=e.acceleration,ax,ay,az;
+ if(v&&[v.x,v.y,v.z].every(Number.isFinite)){ax=v.x;ay=v.y;az=v.z;}else{v=e.accelerationIncludingGravity;if(!v||![v.x,v.y,v.z].every(Number.isFinite))return;if(!gravity)gravity={x:v.x,y:v.y,z:v.z};gravity.x+=(v.x-gravity.x)*.1;gravity.y+=(v.y-gravity.y)*.1;gravity.z+=(v.z-gravity.z)*.1;ax=v.x-gravity.x;ay=v.y-gravity.y;az=v.z-gravity.z;}
+ const a=angle(),sx=ax*Math.cos(a)+ay*Math.sin(a),sy=-ax*Math.sin(a)+ay*Math.cos(a),spin=Number(e.rotationRate?.alpha)||0;if(Math.abs(sx)+Math.abs(sy)+Math.abs(az)<.18&&Math.abs(spin)<3)return;send('lanyardimpulse',{x:clamp(-sx/7,1.5),y:clamp(-sy/7,1.5),z:clamp(-az/7,1.5),spin:clamp(spin/100,1.5)});}
+function enableO(){if(orientationOn)return;orientationOn=true;window.addEventListener('deviceorientation',onOrientation,{passive:true});}
+function enableM(){if(motionOn)return;motionOn=true;window.addEventListener('devicemotion',onMovement,{passive:true});}
+if(orientation&&typeof orientation.requestPermission!=='function')enableO();if(movement&&typeof movement.requestPermission!=='function')enableM();
+host.addEventListener('pointerdown',()=>{if(pending)return;const jobs=[];pending=true;
+ if(orientation&&!orientationOn&&typeof orientation.requestPermission==='function')jobs.push(orientation.requestPermission().then(result=>{if(result==='granted')enableO();}));
+ if(movement&&!motionOn&&typeof movement.requestPermission==='function')jobs.push(movement.requestPermission().then(result=>{if(result==='granted')enableM();}));Promise.allSettled(jobs).then(()=>pending=false);
+},{capture:true});
+function reset(){base=null;gravity=null;x=z=0;send('lanyardtilt',{x:0,z:0});}
+new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;if(!visible)reset();},{threshold:.01}).observe(host);document.addEventListener('visibilitychange',()=>{if(document.hidden)reset();});window.addEventListener('orientationchange',reset);
 })();</script>
 </body></html>

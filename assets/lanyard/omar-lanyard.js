@@ -865,6 +865,12 @@ const Lanyard = (container, {
     scene.add(clampGroup);
 
     const sim = createSimulation();
+    const onImpulse=event=>{const d=event.detail||{},limit=v=>Math.max(-1.5,Math.min(1.5,Number(v)||0)),ix=limit(d.x)*.34,iy=limit(d.y)*.34,iz=limit(d.z)*.34;
+      sim.body.velocity.x+=ix;sim.body.velocity.y+=iy;sim.body.velocity.z+=iz;
+      sim.body.angular.z+=-ix*.6+limit(d.spin)*.12;sim.body.angular.x+=iz*.5;
+      if(sim.body.velocity.length()>8)sim.body.velocity.setLength(8);if(sim.body.angular.length()>6)sim.body.angular.setLength(6);
+      for(let i=1;i<JOINTS;i++){sim.velocities[i].x+=ix*.4;sim.velocities[i].y+=iy*.4;sim.velocities[i].z+=iz*.4;}
+      sim.calm=0;start();};container.addEventListener('lanyardimpulse',onImpulse);
     const controls = [];
     const mouth = new THREE.Vector3();
     const tuck = new THREE.Vector3();
@@ -1149,7 +1155,7 @@ const Lanyard = (container, {
         placeHanging(sim, layout, false);
       }
       render();
-      const resting = sim.calm > 1.2 && !sim.grab && current.breeze === 0;
+      const resting = sim.calm > 1.2 && !sim.grab && current.breeze === 0 && Math.abs(phoneLift+tiltZ*.55)<.002;
       if (visible && !resting) raf = requestAnimationFrame(tick);
     };
 
@@ -1275,7 +1281,7 @@ const Lanyard = (container, {
     resize();
 
     return () => {
-      alive = false;container.removeEventListener('lanyardtilt',onTilt);
+      alive = false;container.removeEventListener('lanyardtilt',onTilt);container.removeEventListener('lanyardimpulse',onImpulse);
       cancelAnimationFrame(raf);
       applyRef.current = null;
       resizeObserver.disconnect();
