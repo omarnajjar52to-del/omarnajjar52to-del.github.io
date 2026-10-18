@@ -1316,5 +1316,5 @@ export async function mountLanyard(container, photo){
  ctx=strap.getContext('2d');ctx.fillStyle='#ff4925';ctx.fillRect(0,0,1536,256);ctx.fillStyle='#141414';ctx.fillRect(0,13,1536,4);ctx.fillRect(0,239,1536,4);ctx.font='bold 76px Arial';ctx.fillText('OMAR AL NAJJAR',45,154);ctx.font='bold 39px Arial';ctx.fillText('✳  CREATIVE STUDIO',866,148);
  const url=canvas=>new Promise(resolve=>canvas.toBlob(blob=>resolve(URL.createObjectURL(blob)),'image/png'));
  const [frontImage,backImage,strapImage]=await Promise.all([front,back,strap].map(url));
- return Lanyard(container,{frontImage,backImage,strapImage,imageFit:'cover',cardColor:'#141414',strapColor:'#ff4925',strapWidth:.65,strapLength:.5,size:.6,finish:'glossy',metal:'silver',breeze:0,intro:true,interactive:true});
+ return Lanyard(container,{frontImage,backImage,strapImage,imageFit:'cover',cardColor:'#141414',strapColor:'#ff4925',strapWidth:.65,strapLength:.5,size:.6,finish:'glossy',metal:'silver',breeze:.22,intro:true,interactive:true});
 }
