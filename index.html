@@ -588,7 +588,7 @@ const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersect
 })();</script>
 <script id="omar-lanyard-loader">(()=>{
 const host=document.getElementById('omarLanyard'),reduced=matchMedia('(prefers-reduced-motion:reduce)');if(!host||reduced.matches)return;let started=false;
-const observer=new IntersectionObserver(async entries=>{if(started||!entries[0].isIntersecting)return;started=true;observer.disconnect();try{const {mountLanyard}=await import('./assets/lanyard/omar-lanyard.js?v=4');mountLanyard(host,new URL('assets/image_001_53bc153cdce3.jpg',document.baseURI).href);if(host.querySelector('canvas'))host.classList.add('lanyard-ready');}catch(error){host.classList.add('lanyard-fallback');}},{rootMargin:'250px 0px'});observer.observe(host);
+const observer=new IntersectionObserver(async entries=>{if(started||!entries[0].isIntersecting)return;started=true;observer.disconnect();try{const {mountLanyard}=await import('./assets/lanyard/omar-lanyard.js?v=5');await mountLanyard(host,new URL('assets/image_001_53bc153cdce3.jpg',document.baseURI).href);if(host.querySelector('canvas'))host.classList.add('lanyard-ready');}catch(error){host.classList.add('lanyard-fallback');}},{rootMargin:'250px 0px'});observer.observe(host);
 })();</script>
 
 <script id="lanyard-automatic-phone-motion">(()=>{

@@ -617,7 +617,7 @@ const stepSimulation = (sim, dt, physics, time) => {
   const h = dt / steps;
   const { nodes, previous, velocities, body } = sim;
   const windX = physics.breeze * (Math.sin(time * 0.53) * 0.7 + Math.sin(time * 1.31 + 1.7) * 0.3) * 3 + (physics.tiltX || 0) * 24;
-  const windZ = physics.breeze * Math.sin(time * 0.37 + 0.6) * 2 + (physics.tiltZ || 0) * 18;
+  const windZ = physics.breeze * Math.sin(time * 0.37 + 0.6) * 2 + (physics.tiltZ || 0) * 8;
   const grab = sim.grab;
   const pin = scratch.pin;
   const nodeDrag = Math.exp(-physics.nodeDrag * h);
@@ -772,7 +772,7 @@ const Lanyard = (container, {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NeutralToneMapping;
     renderer.toneMappingExposure = 1;
-    let tiltX=0,tiltZ=0;const onTilt=e=>{tiltX=Math.max(-1,Math.min(1,e.detail?.x||0));tiltZ=Math.max(-1,Math.min(1,e.detail?.z||0));start();};container.addEventListener('lanyardtilt',onTilt);
+    let tiltX=0,tiltZ=0,phoneLift=0;const onTilt=e=>{tiltX=Math.max(-1,Math.min(1,e.detail?.x||0));tiltZ=Math.max(-1,Math.min(1,e.detail?.z||0));start();};container.addEventListener('lanyardtilt',onTilt);
     const canvas = renderer.domElement;
     canvas.className = 'lanyard-canvas';
     canvas.setAttribute('aria-hidden', 'true');
@@ -1139,6 +1139,9 @@ const Lanyard = (container, {
       last = now;
       time += dt;
       const current = physics();
+      phoneLift += (-tiltZ * .55 - phoneLift) * Math.min(1,dt*6);
+      sim.nodes[0].y=sim.anchor.y+phoneLift;
+      sim.previous[0].copy(sim.nodes[0]);
       stepSimulation(sim, dt, current, time);
       const body = sim.body;
       if (!Number.isFinite(body.position.x + body.position.y + body.position.z + body.quaternion.w)) {
@@ -1296,6 +1299,16 @@ const Lanyard = (container, {
   return container;
 };
 
-export function mountLanyard(container, photo){
- return Lanyard(container,{frontImage:photo,backImage:photo,imageFit:'cover',cardColor:'#141414',strapColor:'#ff4925',strapWidth:.65,strapLength:.5,size:.6,finish:'glossy',metal:'silver',breeze:0,intro:true,interactive:true});
+export async function mountLanyard(container, photo){
+ const picture=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=photo;});
+ const front=document.createElement('canvas'),back=document.createElement('canvas'),strap=document.createElement('canvas');front.width=back.width=1024;front.height=back.height=1440;strap.width=1536;strap.height=256;
+ let ctx=front.getContext('2d');ctx.fillStyle='#090909';ctx.fillRect(0,0,1024,1440);
+ const k=Math.max(1024/picture.width,1290/picture.height),sw=1024/k,sh=1290/k;ctx.drawImage(picture,(picture.width-sw)/2,0,sw,sh,0,0,1024,1290);
+ let fade=ctx.createLinearGradient(0,960,0,1440);fade.addColorStop(0,'#09090900');fade.addColorStop(.6,'#090909ee');fade.addColorStop(1,'#090909');ctx.fillStyle=fade;ctx.fillRect(0,960,1024,480);
+ ctx.strokeStyle='#ffffff40';ctx.lineWidth=2;ctx.strokeRect(30,30,964,1380);ctx.fillStyle='#ff4925';ctx.fillRect(62,83,8,38);ctx.fillStyle='#eeeeee';ctx.font='bold 23px Arial';ctx.fillText('CREATIVE STUDIO',90,111);ctx.fillStyle='#ff4925';ctx.font='bold 68px Arial';ctx.fillText('OMAR AL NAJJAR',62,1240);ctx.fillStyle='#bcbcbc';ctx.font='25px Arial';ctx.fillText('BRANDING  /  PACKAGING  /  DIGITAL',66,1305);ctx.fillStyle='#777';ctx.font='21px Arial';ctx.fillText('ERBIL, IRAQ',66,1370);ctx.fillStyle='#ff4925';ctx.fillText('001',902,1370);
+ ctx=back.getContext('2d');ctx.fillStyle='#111111';ctx.fillRect(0,0,1024,1440);ctx.fillStyle='#ff4925';ctx.beginPath();ctx.moveTo(710,0);ctx.lineTo(1024,0);ctx.lineTo(1024,610);ctx.closePath();ctx.fill();ctx.fillStyle='#f3f0eb';ctx.font='bold 174px Arial';ctx.fillText('OMAR',60,470);ctx.font='bold 56px Arial';ctx.fillText('AL NAJJAR',68,550);ctx.strokeStyle='#ffffff40';ctx.beginPath();ctx.moveTo(68,625);ctx.lineTo(955,625);ctx.stroke();ctx.font='29px Arial';['VISUAL IDENTITY','PACKAGING DESIGN','WEB & DIGITAL','PRODUCT MOTION'].forEach((line,i)=>ctx.fillText(line,70,725+i*65));ctx.fillStyle='#ff4925';ctx.font='bold 28px Arial';ctx.fillText('IDEAS. DESIGN. IMPACT.',70,1260);ctx.fillStyle='#a0a0a0';ctx.font='24px Arial';ctx.fillText('OMAR AL NAJJAR / CREATIVE STUDIO',70,1342);
+ ctx=strap.getContext('2d');ctx.fillStyle='#ff4925';ctx.fillRect(0,0,1536,256);ctx.fillStyle='#141414';ctx.fillRect(0,13,1536,4);ctx.fillRect(0,239,1536,4);ctx.font='bold 76px Arial';ctx.fillText('OMAR AL NAJJAR',45,154);ctx.font='bold 39px Arial';ctx.fillText('✳  CREATIVE STUDIO',866,148);
+ const url=canvas=>new Promise(resolve=>canvas.toBlob(blob=>resolve(URL.createObjectURL(blob)),'image/png'));
+ const [frontImage,backImage,strapImage]=await Promise.all([front,back,strap].map(url));
+ return Lanyard(container,{frontImage,backImage,strapImage,imageFit:'cover',cardColor:'#141414',strapColor:'#ff4925',strapWidth:.65,strapLength:.5,size:.6,finish:'glossy',metal:'silver',breeze:0,intro:true,interactive:true});
 }
