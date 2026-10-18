@@ -616,8 +616,8 @@ const stepSimulation = (sim, dt, physics, time) => {
   const steps = Math.max(1, Math.ceil(dt / MAX_STEP - 1e-6));
   const h = dt / steps;
   const { nodes, previous, velocities, body } = sim;
-  const windX = physics.breeze * (Math.sin(time * 0.53) * 0.7 + Math.sin(time * 1.31 + 1.7) * 0.3) * 3;
-  const windZ = physics.breeze * Math.sin(time * 0.37 + 0.6) * 2;
+  const windX = physics.breeze * (Math.sin(time * 0.53) * 0.7 + Math.sin(time * 1.31 + 1.7) * 0.3) * 3 + (physics.tiltX || 0) * 24;
+  const windZ = physics.breeze * Math.sin(time * 0.37 + 0.6) * 2 + (physics.tiltZ || 0) * 18;
   const grab = sim.grab;
   const pin = scratch.pin;
   const nodeDrag = Math.exp(-physics.nodeDrag * h);
@@ -772,6 +772,7 @@ const Lanyard = (container, {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NeutralToneMapping;
     renderer.toneMappingExposure = 1;
+    let tiltX=0,tiltZ=0;const onTilt=e=>{tiltX=Math.max(-1,Math.min(1,e.detail?.x||0));tiltZ=Math.max(-1,Math.min(1,e.detail?.z||0));start();};container.addEventListener('lanyardtilt',onTilt);
     const canvas = renderer.domElement;
     canvas.className = 'lanyard-canvas';
     canvas.setAttribute('aria-hidden', 'true');
@@ -1110,6 +1111,7 @@ const Lanyard = (container, {
       const springy = clamp(s.elasticity, 0, 1);
       const settle = clamp(s.damping, 0, 1);
       return {
+        tiltX,tiltZ,
         gravity,
         hold: weight * mix(2.2, 5.5, springy),
         stiffness: weight * 10 * JOINTS,
@@ -1270,7 +1272,7 @@ const Lanyard = (container, {
     resize();
 
     return () => {
-      alive = false;
+      alive = false;container.removeEventListener('lanyardtilt',onTilt);
       cancelAnimationFrame(raf);
       applyRef.current = null;
       resizeObserver.disconnect();
